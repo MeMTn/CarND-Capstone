@@ -9,6 +9,11 @@ import copy
 import tf
 from scipy.interpolate import CubicSpline
 
+from numpy.linalg import inv
+import numpy as np
+
+
+
 LOOKAHEAD_WPS = 100  # Number of waypoints we will publish. You can change this number
 waypoints_search_range = 10  # Number of waypoints to search current position back and forth
 
@@ -55,19 +60,51 @@ class WaypointUpdater(object):
 
                 # Current target car velocity in m/s
                 vx = self.get_waypoint_velocity(lane.waypoints[0])
+                
+                print " "
+                print " "
+                print " "
+                print "AA1 -- target vel = ", vx, " / self.velocity = ", self.velocity, " / next_waypoint_index = ", self.next_waypoint_index, " / accel_limit = ", self.accel_limit
+                
                 vx2 = vx * vx
+                
+                end_wp = self.waypoints[LOOKAHEAD_WPS-1]
+                lookahead_dist = self.distance(lane.waypoints, 0, LOOKAHEAD_WPS-1)
+                
+                print "AA11 -- last wp : x = ", end_wp.pose.pose.position.x, " / y = ", end_wp.pose.pose.position.y, " / lookahead_dist = ", lookahead_dist
+                
+                jmt_distance = None
+                
+                # TODO, take out:
+                if self.next_waypoint_index > 300:
+                    self.traffic_stop_waypoint = 410
        
                 if self.traffic_stop_waypoint != None:
                     # Stop light ahead
+                    
+                    # is the next stop within my planned trajectory
+                    if self.traffic_stop_waypoint < self.next_waypoint_index + LOOKAHEAD_WPS:
+                        print "AA12"
         
-                    # Calculate deceleration needed to stop at traffic stop waypoint
-                    stopping_distance = self.distance(self.waypoints, self.next_waypoint_index, self.traffic_stop_waypoint)
-                    if stopping_distance > 0:
-                        ax = - vx2 / (2. * stopping_distance)
-##                        if ax < self.decel_limit:
-##                            ax = self.decel_limit
-                    else:
-                        ax = self.decel_limit                  
+                        # Calculate deceleration needed to stop at traffic stop waypoint
+                        stopping_distance = self.distance(self.waypoints, self.next_waypoint_index, self.traffic_stop_waypoint)
+                        
+                        print " QQ1 -- STOP AHEAD!  stopping_distance = ", stopping_distance
+                        print " "
+                        
+                        if stopping_distance > 0:
+                            ax = - vx2 / (2. * stopping_distance)
+                            
+                            start = [0, vx, 0]
+                            end = [stopping_distance, 0, 0]
+                            T = 10 # sec TODO: ??
+                            jmt_distance = self.JMT(start, end, T)
+                            
+                            print "AA13 jmt_distance = ", jmt_distance
+                            
+                        else:
+                            print " QQ2 -- ax = ", self.decel_limit
+                            ax = self.decel_limit
                     
                 else:
                     # No stop light ahead
@@ -80,23 +117,88 @@ class WaypointUpdater(object):
                     else:
                         ax = 0
                     
+                # TODO: never set lane.waypoints[0].twist.twist.linear.x
+                
+                global_t = 0.0
+                global_dist = 0.0
+                    
                 prev_pos = lane.waypoints[0].pose.pose.position
                 for wp in lane.waypoints[1:]:
                     next_pos = wp.pose.pose.position
                     dist = self.distance_between_two_points(prev_pos, next_pos)
                     prev_pos = next_pos
-                    if ax:
+                    
+                    if 1 == 2 and jmt_distance != None:
+                        print "  WW1 global_t = ", global_t, " / global_dist = ", global_dist
+                        # how long would it take with our current velocity to manage the distance of "dist:
+                        if vx > 0:
+                            delta_t = dist / vx # TODO: using vx here not ideal
+                            global_t = global_t + delta_t
+                            jmt_calculated_dist = self.evaluate_JMT(jmt_distance, global_t)
+                            jmt_calculated_dist = jmt_calculated_dist - global_dist
+                            print "  WW2 jmt_calculated_dist = ", jmt_calculated_dist, " / vs. dist = ", dist
+                            global_dist = global_dist + jmt_calculated_dist
+                            
+                            wp.twist.twist.linear.x = jmt_calculated_dist / delta_t
+                    
+                    elif ax:
                         vwp2 = vx2 + 2 * ax * dist
                         if vwp2 > 0:
                             vwp = math.sqrt(vwp2)
                         else:
                             vwp = 0
+                        wp.twist.twist.linear.x = vwp
                     else:
                         vwp = vx
-                    wp.twist.twist.linear.x = vwp                
+                        wp.twist.twist.linear.x = vwp
+                    
+                    
+                if 1 == 1:
+                    print " "
+                    print "  AA2 -- vel = "
+                    for wp in lane.waypoints:
+                        print wp.twist.twist.linear.x, ",",
+                    
+                    gdist = 0
+                    print " "
+                    print "  AA3 -- dist = "
+                    print "0, ",
+                    prev_pos = lane.waypoints[0].pose.pose.position
+                    for wp in lane.waypoints[1:]:
+                        next_pos = wp.pose.pose.position
+                        dist = self.distance_between_two_points(prev_pos, next_pos)
+                        prev_pos = next_pos
+                        gdist = gdist + dist
+                        print gdist, ",",
+                    print " "
+                    print " "
                     
                 self.final_waypoints_pub.publish(lane)
             rate.sleep()
+
+    def evaluate_JMT(self, jmt, t):
+        return (jmt[0] + jmt[1] * t + jmt[2] * pow(t, 2) + jmt[3] * pow(t, 3) + jmt[4] * pow(t, 4) + jmt[5] * pow(t, 5) )
+
+    # Calculate the Jerk Minimizing Trajectory that connects the initial state
+    #  to the final state in time T.
+    def JMT(self, start, end, T):
+        A = np.array([
+                       [T*T*T, T*T*T*T, T*T*T*T*T],
+                       [3*T*T, 4*T*T*T, 5*T*T*T*T],
+                       [6*T, 12*T*T, 20*T*T*T]
+                     ])
+        
+        B = np.array([
+                       end[0]-(start[0]+start[1]*T+.5*start[2]*T*T),
+                       end[1]-(start[1]+start[2]*T),
+                       end[2]-start[2]
+                     ])
+        
+        A_inv = inv(A)
+
+        C = np.matmul(A_inv, B)
+        
+        return [start[0], start[1], 0.5*start[2], C[0], C[1], C[2]]
 
   
     def distance_between_two_points(self, position1, position2):
@@ -168,8 +270,20 @@ class WaypointUpdater(object):
     # This is where the real magic happens of moving the car. Find the closes waypoint and publish it
     def pose_cb(self, msg):
         self.current_pose = msg
+        
+        c_pos = self.current_pose.pose.position
+        print "XX0 -- current_pose : x = ", c_pos.x, " / y = ", c_pos.y
+        
         if self.waypoints:
             next_waypoint_index = self.identify_next_waypoint_index()
+            
+            # RP
+            wp_pos   = self.waypoints[next_waypoint_index].pose.pose#.position
+            wp_twist = self.waypoints[next_waypoint_index].twist.twist
+            # print "XX1 -- next_waypoint_index ", next_waypoint_index, " -> x = ", wp_pos.x, " / y = ", wp_pos.y, " / z = ", wp_pos.z, " || 
+            # print "XX1 -- next_waypoint_index ", next_waypoint_index, " -> wp_pos = ", wp_pos, " / wp_twist = ", wp_twist
+            print " "
+            
             self.next_wp_pub.publish(Int32(next_waypoint_index))
 
 
