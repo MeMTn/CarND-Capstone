@@ -22,26 +22,85 @@ class WaypointUpdater(object):
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb, queue_size=1)
         rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb, queue_size=1)
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
+        self.next_wp_pub = rospy.Publisher('/next_wp', Int32, queue_size=1)
         # Store the Waypoint List when Base WayPoint is Called 
         self.waypoints = None
         self.current_pose = None
         self.next_waypoint_index = None
+        self.traffic_stop_waypoint = None
+
+        self.loop_freq = 10 # hertz
+
+        self.decel_limit = rospy.get_param('/dbw_node/decel_limit', -5)
+        self.accel_limit = rospy.get_param('/dbw_node/accel_limit', 1)              
+
+        # Convert kph to meters per sec
+        self.velocity = rospy.get_param('/waypoint_loader/velocity', 10) * 0.27778
+        self.velocity_min = self.accel_limit * (1./self.loop_freq)
+
+        self.stopped = False
+        
         self.loop()
 
     def loop(self):
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(self.loop_freq)
         while not rospy.is_shutdown():
             if (self.waypoints and self.next_waypoint_index != None):
                 # For now a very simple implementation to get things moving. Find and then Publish the Lookahead waypoints
                 lane = Lane()
                 lane.header.frame_id = self.current_pose.header.frame_id
                 lane.header.stamp = rospy.Time.now()
+                
                 # Publish Waypoints for the lookahead defined
                 if self.next_waypoint_index+LOOKAHEAD_WPS < len(self.waypoints):
                     lane.waypoints = self.waypoints[self.next_waypoint_index:self.next_waypoint_index+LOOKAHEAD_WPS]
                 else:
                     lane.waypoints = self.waypoints[self.next_waypoint_index:]
                     lane.waypoints.extend(self.waypoints[0:(self.next_waypoint_index+LOOKAHEAD_WPS) % len(self.waypoints)])
+
+                # Current target car velocity in m/s
+                vx = self.get_waypoint_velocity(lane.waypoints[0])
+                vx2 = vx * vx
+       
+                if self.traffic_stop_waypoint != None:
+                    # Stop light ahead
+        
+                    # Calculate deceleration needed to stop at traffic stop waypoint
+                    stopping_distance = self.distance(self.waypoints, self.next_waypoint_index, self.traffic_stop_waypoint)
+                    if stopping_distance > 0:
+                        ax = - vx2 / (2. * stopping_distance)
+                        if ax < self.decel_limit:
+                            ax = self.decel_limit
+                    else:
+                        ax = self.decel_limit
+                        self.stopped = True
+                    
+                else:
+                    # No stop light ahead
+                    if vx < self.velocity:
+                        ax = self.accel_limit
+                        if vx < self.velocity_min:
+                            vx = self.velocity_min
+                            self.set_waypoint_velocity(self.waypoints, 0, vx)
+                            vx2 = vx * vx
+                    else:
+                        ax = 0
+            
+                prev_pos = lane.waypoints[0].pose.pose.position
+                for wp in lane.waypoints[1:]:
+                    next_pos = wp.pose.pose.position
+                    dist = self.distance_between_two_points(prev_pos, next_pos)
+                    prev_pos = next_pos
+                    if ax:
+                        vwp2 = vx2 + 2 * ax * dist
+                        if vwp2 > 0:
+                            vwp = math.sqrt(vwp2)
+                        else:
+                            vwp = 0
+                    else:
+                        vwp = vx
+                    wp.twist.twist.linear.x = vwp                
+                    
                 self.final_waypoints_pub.publish(lane)
             rate.sleep()
 
@@ -50,7 +109,6 @@ class WaypointUpdater(object):
         a = position1
         b = position2
         return math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2)
-
 
 
     # Find waypoint coordinates in Car Coordinate Systems
@@ -79,29 +137,13 @@ class WaypointUpdater(object):
         # Find Map Coordinates for this WayPoint
         closest_waypoint_in_car_coordinate_system = self.waypoint_in_car_coordinate_system(closest_waypoint_index)
         # If Behind increase the waypoint index 
-        if ( closest_waypoint_in_car_coordinate_system < 0.):
+        if ( closest_waypoint_in_car_coordinate_system < 0. ) :
             closest_waypoint_index += 1
-        self.next_waypoint_index = closest_waypoint_index % len(self.waypoints)
-        return closest_waypoint_index
-
-    def find_search_range(self):
-        search_range_begin_index = 0
-        search_range_end_index = len(self.waypoints)
-        if (self.next_waypoint_index):
-            search_range_begin_index = max (self.next_waypoint_index - waypoints_search_range, 0)
-            search_range_end_index = min (self.next_waypoint_index + waypoints_search_range, search_range_end_index)
-        return search_range_begin_index, search_range_end_index
-    
-    def find_shortest_distance_waypoint_bet_range(self, search_range_begin_index, search_range_end_index):
-        minimum_distance_value = 90000
-        closest_waypoint_index = 0
-        car_current_position = self.current_pose.pose.position
-        for idx in range(search_range_begin_index, search_range_end_index):
-            car_future_position = self.waypoints[idx].pose.pose.position
-            dist = self.distance_between_two_points(car_current_position, car_future_position)
-            if dist < minimum_distance_value:
-                minimum_distance_value = dist
-                closest_waypoint_index = idx
+            closest_waypoint_index %= len(self.waypoints)
+        if ( closest_waypoint_index == self.next_waypoint_index) :
+            closest_waypoint_index += 1
+            closest_waypoint_index %= len(self.waypoints)
+        self.next_waypoint_index = closest_waypoint_index
         return closest_waypoint_index
 
     def find_close_waypoint_in_range(self):
@@ -130,16 +172,14 @@ class WaypointUpdater(object):
                 closest_waypoint_index = idx
         return closest_waypoint_index    
 
-    # Helper method 
-    def find_close_waypoint_in_range_org(self):       
-        search_range_begin_index, search_range_end_index = self.find_search_range()
-        return self.find_shortest_distance_waypoint_bet_range(search_range_begin_index, search_range_end_index)
 
     # This is where the real magic happens of moving the car. Find the closes waypoint and publish it
     def pose_cb(self, msg):
         self.current_pose = msg
         if self.waypoints:
             next_waypoint_index = self.identify_next_waypoint_index()
+            self.next_wp_pub.publish(Int32(next_waypoint_index))
+
 
     def waypoints_cb(self, lane):
         if hasattr(self, 'waypoints') and self.waypoints != lane.waypoints:
@@ -148,7 +188,32 @@ class WaypointUpdater(object):
 
 
     def traffic_cb(self, traffic_waypoint):
-        pass
+        print(traffic_waypoint)
+        if self.traffic_stop_waypoint is None:
+            if self.waypoints and traffic_waypoint.data >= 0 and traffic_waypoint.data < len(self.waypoints):
+                # Upcoming stop
+                self.traffic_stop_waypoint = traffic_waypoint.data - 20
+                rospy.loginfo('Setting traffic stop waypoint to %s', traffic_waypoint.data)
+        elif traffic_waypoint.data == -1:# and self.stopped:
+            # Star moving again
+            self.traffic_stop_waypoint = None
+            self.stopped = False
+            rospy.loginfo('Setting traffic stop waypoint to None')
+
+
+    def get_waypoint_velocity(self, waypoint):
+        return waypoint.twist.twist.linear.x
+
+    def set_waypoint_velocity(self, waypoints, waypoint, velocity):
+        waypoints[waypoint].twist.twist.linear.x = velocity
+
+    def distance(self, waypoints, wp1, wp2):
+        dist = 0
+        dl = lambda a, b: math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2  + (a.z-b.z)**2)
+        for i in range(wp1, wp2+1):
+            dist += dl(waypoints[wp1].pose.pose.position, waypoints[i].pose.pose.position)
+            wp1 = i
+        return dist
 
 
 if __name__ == '__main__':
