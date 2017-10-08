@@ -124,8 +124,6 @@ class TLDetector(object):
                 minimum_distance_value = distance_to_waypoint
                 closest_waypoint_index = current_waypoint_index
             current_waypoint_index += 1
-        #print "---closest way point index"
-        #print closest_waypoint_index
         return closest_waypoint_index
 
 
@@ -218,14 +216,14 @@ class TLDetector(object):
                 current_car_position = self.pose.pose.position
                 tl_position = tl.pose.pose.position
                 distance = self.distance_between_two_points(current_car_position, tl_position)
-                if distance < distance_to_closest_light:
+                tl_wp = self.get_closest_waypoint(tl_position)
+                # if the traffic light is in front of the car and its distance is smaller then the reference distance:
+                if tl_wp > car_position and distance < distance_to_closest_light:
                     light = tl
+                    light_wp = tl_wp
                     distance_to_closest_light = distance
         
         if light:
-            
-            light_wp = self.get_closest_waypoint(light.pose.pose.position)
-
             state = self.get_light_state(light)
             return light_wp, state
         self.waypoints = None
