@@ -55,8 +55,9 @@ class TLDetector(object):
     def pose_cb(self, msg):
         self.pose = msg
 
-    def waypoints_cb(self, waypoints):
-        self.waypoints = waypoints
+    def waypoints_cb(self, lane):
+        if hasattr(self, 'waypoints') and self.waypoints != lane.waypoints:
+            self.waypoints = lane.waypoints
 
     def traffic_cb(self, msg):
         self.lights = msg.lights
@@ -72,10 +73,10 @@ class TLDetector(object):
         self.has_image = True
         self.camera_image = msg
         light_wp, state = self.process_traffic_lights()
-        print "light waypoint: "
-        print light_wp
-        print "car waypoint: "
-        print self.pose
+        #print "light waypoint: "
+        #print light_wp
+        #print "car waypoint: "
+        #print self.pose
         '''
         Publish upcoming red lights at camera frequency.
         Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
@@ -113,7 +114,20 @@ class TLDetector(object):
 
         """
         #TODO implement
-        return 0
+        minimum_distance_value = 999999
+        closest_waypoint_index = 0
+        current_waypoint_index = 0
+        for waypoint in self.waypoints:
+            waypoint_pos = waypoint.pose.pose.position
+            distance_to_waypoint = self.distance_between_two_points(pose, waypoint_pos)
+            if distance_to_waypoint < minimum_distance_value:
+                minimum_distance_value = distance_to_waypoint
+                closest_waypoint_index = current_waypoint_index
+            current_waypoint_index += 1
+        #print "---closest way point index"
+        #print closest_waypoint_index
+        return closest_waypoint_index
+
 
 
     def project_to_image_plane(self, point_in_world):
@@ -178,7 +192,7 @@ class TLDetector(object):
         #Get classification
         return self.light_classifier.get_classification(cv_image)
 
-    def distance_between_two_waypoints(self, p1, p2):
+    def distance_between_two_points(self, p1, p2):
         x, y, z = p1.x - p2.x, p1.y - p2.y, p1.z - p2.z
         return math.sqrt(x*x + y*y + z*z)
 
@@ -196,24 +210,24 @@ class TLDetector(object):
         # List of positions that correspond to the line to stop in front of for a given intersection
         stop_line_positions = self.config['stop_line_positions']
         if(self.pose):
-            car_position = self.get_closest_waypoint(self.pose.pose)
+            car_position = self.get_closest_waypoint(self.pose.pose.position)
         #TODO find the closest visible traffic light (if one exists)
-        print "lights list length"
-        print len(self.lights)
-        print self.lights
-        if (car_position and self.lights):
+        #print "lights list length"
+        #print len(self.lights)
+        #print self.lights
+        if (self.lights):
             distance_to_closest_light = 9999999
             for tl in self.lights:
-                distance = self.distance_between_two_waypoints(self.pose.pose, tl.pose) #tl_waypoint)
-                print "distance: "
-                print distance
+                current_car_position = self.pose.pose.position
+                tl_position = tl.pose.pose.position
+                distance = self.distance_between_two_points(current_car_position, tl_position)
                 if distance < distance_to_closest_light:
                     light = tl
                     distance_to_closest_light = distance
         
         if light:
             
-            light_wp = self.get_closest_waypoint(light.pose)
+            light_wp = self.get_closest_waypoint(light.pose.pose.position)
 
             state = self.get_light_state(light)
             return light_wp, state
