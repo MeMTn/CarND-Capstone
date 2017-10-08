@@ -113,7 +113,7 @@ class TLDetector(object):
             int: index of the closest waypoint in self.waypoints
 
         """
-        #TODO implement
+        #TODO implement ( should be optimized)
         minimum_distance_value = 999999
         closest_waypoint_index = 0
         current_waypoint_index = 0
