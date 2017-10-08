@@ -212,9 +212,6 @@ class TLDetector(object):
         if(self.pose):
             car_position = self.get_closest_waypoint(self.pose.pose.position)
         #TODO find the closest visible traffic light (if one exists)
-        #print "lights list length"
-        #print len(self.lights)
-        #print self.lights
         if (self.lights):
             distance_to_closest_light = 9999999
             for tl in self.lights:
