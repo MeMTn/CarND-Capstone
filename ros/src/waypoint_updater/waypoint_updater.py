@@ -8,6 +8,7 @@ import math
 import copy
 import tf
 from scipy.interpolate import CubicSpline
+import numpy as np
 
 LOOKAHEAD_WPS = 100  # Number of waypoints we will publish. You can change this number
 waypoints_search_range = 10  # Number of waypoints to search current position back and forth
@@ -57,16 +58,22 @@ class WaypointUpdater(object):
                 else:
                     lane.waypoints = self.waypoints[self.next_waypoint_index:]
                     lane.waypoints.extend(self.waypoints[0:(self.next_waypoint_index+LOOKAHEAD_WPS) % len(self.waypoints)])
-
+                    
                 # Current target car velocity in m/s
                 vx = self.get_waypoint_velocity(lane.waypoints[0])
                 vx2 = vx * vx
-       
+                
+                print " "
+                print " -- 1 current next_waypoint_index = ", self.next_waypoint_index, " / vx = ", vx
+
                 if self.traffic_stop_waypoint != None:
                     # Stop light ahead
         
                     # Calculate deceleration needed to stop at traffic stop waypoint
                     stopping_distance = self.distance(self.waypoints, self.next_waypoint_index, self.traffic_stop_waypoint)
+                    
+                    print " -- 2 stopping_distance = ", stopping_distance, " / self.traffic_stop_waypoint = ", self.traffic_stop_waypoint
+                    
                     if stopping_distance > 0:
                         ax = - vx2 / (2. * stopping_distance)
                         if ax < self.decel_limit:
@@ -99,10 +106,30 @@ class WaypointUpdater(object):
                             vwp = 0
                     else:
                         vwp = vx
-                    wp.twist.twist.linear.x = vwp                
+                    wp.twist.twist.linear.x = vwp
+                    
+                self.smooth_target_velocities(lane.waypoints)
                     
                 self.final_waypoints_pub.publish(lane)
+                
+                print " "
+                
             rate.sleep()
+
+    def smooth_target_velocities(self, lane_wps):
+        vx_np = np.zeros(len(lane_wps))
+        idx_np = np.zeros(len(lane_wps))
+        for idx, wp in enumerate(lane_wps):
+            vx_np[idx] = wp.twist.twist.linear.x
+            idx_np[idx] = idx
+
+        # Fit a line, y = mx + c, through some "noisy" velocity data
+        A = np.vstack([idx_np, np.ones(len(idx_np))]).T
+        m, c = np.linalg.lstsq(A, vx_np)[0]
+        
+        for idx, wp in enumerate(lane_wps):
+            wp.twist.twist.linear.x = idx * m + c
+        
 
   
     def distance_between_two_points(self, position1, position2):
@@ -188,9 +215,10 @@ class WaypointUpdater(object):
 
 
     def traffic_cb(self, traffic_waypoint):
-        print(traffic_waypoint)
+        print "traffic_waypoint received : ",  traffic_waypoint.data, " / len(self.waypoints) = ", len(self.waypoints), " / end wp index: ", self.next_waypoint_index+LOOKAHEAD_WPS
+        
         if self.traffic_stop_waypoint is None:
-            if self.waypoints and traffic_waypoint.data >= 0 and traffic_waypoint.data < len(self.waypoints):
+            if self.waypoints and traffic_waypoint.data >= 0 and traffic_waypoint.data < (self.next_waypoint_index+LOOKAHEAD_WPS):
                 # Upcoming stop
                 self.traffic_stop_waypoint = traffic_waypoint.data # - 20  not needed anymore since we are passed the wp index for the stop line
                 rospy.loginfo('Setting traffic stop waypoint to %s', traffic_waypoint.data)
