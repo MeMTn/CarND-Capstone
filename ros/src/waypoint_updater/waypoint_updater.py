@@ -91,6 +91,7 @@ class WaypointUpdater(object):
                             self.set_waypoint_velocity(self.waypoints, 0, vx)
                             vx2 = vx * vx
                     else:
+                        vx = self.velocity
                         ax = 0
             
                 prev_pos = lane.waypoints[0].pose.pose.position
@@ -102,8 +103,10 @@ class WaypointUpdater(object):
                         vwp2 = vx2 + 2 * ax * dist
                         if vwp2 > 0:
                             vwp = math.sqrt(vwp2)
+                            vx2 = vwp2
                         else:
                             vwp = 0
+                            vx2 = 0
                     else:
                         vwp = vx
                     wp.twist.twist.linear.x = vwp
