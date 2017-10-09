@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import rospy
 from std_msgs.msg import Int32
-from geometry_msgs.msg import PoseStamped, Pose
+from geometry_msgs.msg import PoseStamped, Pose, Point
 from styx_msgs.msg import TrafficLightArray, TrafficLight
 from styx_msgs.msg import Lane
 from sensor_msgs.msg import Image
@@ -208,9 +208,8 @@ class TLDetector(object):
 
         """
         light = None
+        light_wp = None
 
-        # List of positions that correspond to the line to stop in front of for a given intersection
-        stop_line_positions = self.config['stop_line_positions']
         if(self.pose):
             car_position = self.get_closest_waypoint(self.pose.pose.position)
         
@@ -236,9 +235,41 @@ class TLDetector(object):
         
         if light:
             state = self.get_light_state(light)
-            return light_wp, state
+            closest_ss_wp_index = self.get_stopline_wp_before_tl(light_wp)
+            print " -- process_traffic_lights: light_wp = ", light_wp, " vs. closest_ss_wp_index = " , closest_ss_wp_index
+            return closest_ss_wp_index, state
         #self.waypoints = None
         return -1, TrafficLight.UNKNOWN
+    
+    def get_stopline_wp_before_tl(self, light_wp_index):
+        # List of positions that correspond to the line to stop in front of for a given intersection
+        stop_line_positions = self.config['stop_line_positions']
+        current_car_position = self.pose.pose.position
+        light_position = self.waypoints[light_wp_index].pose.pose.position
+        stop_line_position = Point()
+        
+        distance_to_closest_stopline = 9999999
+        closest_ss_wp_index = -1
+        
+        for idx, sp in enumerate(stop_line_positions):
+            stop_line_position.x = sp[0]
+            stop_line_position.y = sp[1]
+            distance = self.distance_between_two_points(light_position, stop_line_position)
+            # print " -- stop_line_position : x = ", sp[0], " / y = ", sp[1], " / distance to light_wp = ", distance
+            
+            # stop-sign waypoint index
+            ss_wp_index = self.get_closest_waypoint(stop_line_position)
+            
+            if ss_wp_index < light_wp_index and distance < distance_to_closest_stopline:
+                closest_ss_wp_index = ss_wp_index
+                distance_to_closest_stopline = distance
+            
+        if closest_ss_wp_index == -1:
+            # no waypoint found for the stopline which is before the waypoint for the TL
+            #  -> then stop at the the TL
+            return light_wp_index
+        
+        return closest_ss_wp_index
 
 if __name__ == '__main__':
     try:

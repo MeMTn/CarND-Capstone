@@ -192,7 +192,7 @@ class WaypointUpdater(object):
         if self.traffic_stop_waypoint is None:
             if self.waypoints and traffic_waypoint.data >= 0 and traffic_waypoint.data < len(self.waypoints):
                 # Upcoming stop
-                self.traffic_stop_waypoint = traffic_waypoint.data - 20
+                self.traffic_stop_waypoint = traffic_waypoint.data # - 20  not needed anymore since we are passed the wp index for the stop line
                 rospy.loginfo('Setting traffic stop waypoint to %s', traffic_waypoint.data)
         elif traffic_waypoint.data == -1:# and self.stopped:
             # Star moving again
