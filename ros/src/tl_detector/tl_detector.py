@@ -86,14 +86,14 @@ class TLDetector(object):
             self.last_state = self.state
             light_wp = light_wp if state == TrafficLight.RED else -1
             #TODO: DEBUG remove the following print statements in the final version
-            if state == TrafficLight.RED:
-                print "red light detected"
-            elif state == TrafficLight.GREEN:
-                print "green light detected"
-            elif state == TrafficLight.YELLOW:
-                print "yellow light detected"
-            elif state == TrafficLight.UNKNOWN:
-                print "unknown traffic light detected"
+##            if state == TrafficLight.RED:
+##                print "red light detected"
+##            elif state == TrafficLight.GREEN:
+##                print "green light detected"
+##            elif state == TrafficLight.YELLOW:
+##                print "yellow light detected"
+##            elif state == TrafficLight.UNKNOWN:
+##                print "unknown traffic light detected"
             self.last_wp = light_wp
             self.upcoming_red_light_pub.publish(Int32(light_wp))
         else:
@@ -236,7 +236,7 @@ class TLDetector(object):
         if light:
             state = self.get_light_state(light)
             closest_ss_wp_index = self.get_stopline_wp_before_tl(light_wp)
-            print " -- process_traffic_lights: light_wp = ", light_wp, " vs. closest_ss_wp_index = " , closest_ss_wp_index
+##            print " -- process_traffic_lights: light_wp = ", light_wp, " vs. closest_ss_wp_index = " , closest_ss_wp_index
             return closest_ss_wp_index, state
         #self.waypoints = None
         return -1, TrafficLight.UNKNOWN
