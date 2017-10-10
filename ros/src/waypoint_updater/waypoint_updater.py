@@ -37,9 +37,8 @@ class WaypointUpdater(object):
 
         # Convert kph to meters per sec
         self.velocity = rospy.get_param('/waypoint_loader/velocity', 10) * 0.27778
-        self.velocity_min = self.accel_limit * (1./self.loop_freq)
-
-        self.stopped = True
+        self.velocity_min = 2 * self.accel_limit * (1./self.loop_freq)
+        self.current_velocity = 0
         
         self.loop()
 
@@ -62,6 +61,7 @@ class WaypointUpdater(object):
                 # Current target car velocity in m/s
                 vx = self.get_waypoint_velocity(lane.waypoints[0])
                 vx2 = vx * vx
+                self.current_velocity = vx
                 
 ##                print " "
 ##                print " -- 1 current next_waypoint_index = ", self.next_waypoint_index, " / vx = ", vx
@@ -71,18 +71,20 @@ class WaypointUpdater(object):
         
                     # Calculate deceleration needed to stop at traffic stop waypoint
                     stopping_distance = self.distance(self.waypoints, self.next_waypoint_index, self.traffic_stop_waypoint)
-                    
-##                    print " -- 2 stopping_distance = ", stopping_distance, " / self.traffic_stop_waypoint = ", self.traffic_stop_waypoint
-                    
-                    if stopping_distance > 0:
-                        ax = - vx2 / (2. * stopping_distance)
-                        if ax < self.decel_limit:
-                            ax = self.decel_limit
-                    else:
-                        ax = self.decel_limit
+                    min_stopping_distance = -vx2 / (2 * self.decel_limit)
 
-                    if vx < self.velocity_min:
-                        self.stopped = True                        
+##                    print " -- 2 stopping_distance = ", stopping_distance, " / self.traffic_stop_waypoint = ", self.traffic_stop_waypoint
+
+                    if stopping_distance > 10 * min_stopping_distance:
+                        # Keep current speed
+                        ax = 0
+                    else:
+                        if stopping_distance > 0:
+                            ax = - vx2 / (2. * stopping_distance)
+                            if ax < self.decel_limit:
+                                ax = self.decel_limit
+                        else:
+                            ax = self.decel_limit               
                     
                 else:
                     # No stop light ahead
@@ -90,8 +92,8 @@ class WaypointUpdater(object):
                         ax = self.accel_limit
                         if vx < self.velocity_min:
                             vx = self.velocity_min
-                            self.set_waypoint_velocity(self.waypoints, 0, vx)
                             vx2 = vx * vx
+                            self.set_waypoint_velocity(lane.waypoints, 0, vx)
                     else:
                         vx = self.velocity
                         vx2 = vx * vx
@@ -172,10 +174,9 @@ class WaypointUpdater(object):
         # If Behind increase the waypoint index 
         if ( closest_waypoint_in_car_coordinate_system < 0. ) :
             closest_waypoint_index += 1
-            closest_waypoint_index %= len(self.waypoints)
-        if ( closest_waypoint_index == self.next_waypoint_index) :
+        if ( closest_waypoint_index <= self.next_waypoint_index) :
             closest_waypoint_index += 1
-            closest_waypoint_index %= len(self.waypoints)
+        closest_waypoint_index %= len(self.waypoints)
         self.next_waypoint_index = closest_waypoint_index
         return closest_waypoint_index
 
@@ -221,26 +222,37 @@ class WaypointUpdater(object):
 
 
     def traffic_cb(self, traffic_waypoint):
-##        print "traffic_waypoint received : ",  traffic_waypoint.data, " / len(self.waypoints) = ", len(self.waypoints), " / end wp index: ", self.next_waypoint_index+LOOKAHEAD_WPS
+        if self.waypoints is None or self.next_waypoint_index is None:
+            # Nothing to do
+            return
+
+        traffic_wp = traffic_waypoint.data
         
-        if self.traffic_stop_waypoint is None:
-            if self.waypoints and traffic_waypoint.data >= 0:
-                if (self.next_waypoint_index+LOOKAHEAD_WPS) < len(self.waypoints):
-                    if traffic_waypoint.data <= self.next_waypoint_index or traffic_waypoint.data >= (self.next_waypoint_index+LOOKAHEAD_WPS):
-                        # Out of range
-                        return
-                else:
-                    if (traffic_waypoint.data >= (self.next_waypoint_index+LOOKAHEAD_WPS) % len(self.waypoint)) and (traffic_waypoint.data <= self.next_waypoint_index):
-                        # Out of range
-                        return
-                
-                # Upcoming stop
-                self.traffic_stop_waypoint = traffic_waypoint.data # - 20  not needed anymore since we are passed the wp index for the stop line
-                rospy.loginfo('Setting traffic stop waypoint to %s', traffic_waypoint.data)
-        elif traffic_waypoint.data == -1: # and self.stopped:
-            # Star moving again
+        if traffic_wp >= 0:
+            # Check if waypoint is within range of path
+            valid_traffic_waypoint = True
+            
+            end_wp = self.next_waypoint_index+LOOKAHEAD_WPS
+            num_wp = len(self.waypoints)
+
+            if end_wp < num_wp:
+                if traffic_wp <= self.next_waypoint_index or traffic_wp >= end_wp:
+                    # Out of range
+                    valid_traffic_waypoint = False
+            else:
+                if (traffic_wp >= (end_wp % num_wp)) and (traffic_wp <= self.next_waypoint_index):
+                    # Out of range
+                    valid_traffic_waypoint = False
+        else:
+            valid_traffic_waypoint = False
+            
+        if valid_traffic_waypoint and self.traffic_stop_waypoint is None:
+            # Upcoming stop
+            self.traffic_stop_waypoint = traffic_wp
+            rospy.loginfo('Setting traffic stop waypoint to %s', traffic_wp)        
+        elif self.traffic_stop_waypoint != None and self.current_velocity <= .001 and (traffic_wp == -1):
+            # Start moving again
             self.traffic_stop_waypoint = None
-            self.stopped = False
             rospy.loginfo('Setting traffic stop waypoint to None')
 
 
