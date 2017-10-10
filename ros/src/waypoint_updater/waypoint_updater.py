@@ -37,6 +37,10 @@ class WaypointUpdater(object):
 
         # Convert kph to meters per sec
         self.velocity = rospy.get_param('/waypoint_loader/velocity', 10) * 0.27778
+
+        # Go slow for now in order to give the traffic classifier more time
+        self.velocity = 2.0
+        
         self.velocity_min = 2 * self.accel_limit * (1./self.loop_freq)
         self.current_velocity = 0
         
