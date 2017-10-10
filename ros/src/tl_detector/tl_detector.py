@@ -42,7 +42,9 @@ class TLDetector(object):
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
         self.bridge = CvBridge()
-        self.light_classifier = TLClassifier()
+        # KB 10Oct 2017
+        # adding the path to the light classifier initialisation call in the line below
+        self.light_classifier = TLClassifier("light_classification/model/GAN")
         self.listener = tf.TransformListener()
 
         self.state = TrafficLight.UNKNOWN
@@ -155,7 +157,9 @@ class TLDetector(object):
             rospy.logerr("Failed to find camera to map transform")
 
         #TODO Use tranform and rotation to calculate 2D position of light in image
-
+        # KB 10Oct2017
+        # commenting line below, and using dummy values, so that tf_classifier.py can be tested 
+        # x, y = self.project_to_image_plane(light.pose.pose.position)
         x = 0
         y = 0
 
@@ -185,7 +189,9 @@ class TLDetector(object):
         # current light status from the simulator instead of getting it
         # from the classifier please remove the following line as soon as
         # the classifer works.
-        return light.state
+        # KB 10Oct2017
+        # commenting out line below
+        # return light.state
 
         #Get classification
         return self.light_classifier.get_classification(cv_image)
