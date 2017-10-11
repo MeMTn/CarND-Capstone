@@ -21,7 +21,8 @@ class TLDetector(object):
         self.pose = None
         self.waypoints = None
         self.camera_image = None
-        self.lights = []
+        self.lights = None
+        self.lights_wp = None
 
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
@@ -63,6 +64,13 @@ class TLDetector(object):
 
     def traffic_cb(self, msg):
         self.lights = msg.lights
+        if self.waypoints and not self.lights_wp:
+            lights_wp = []
+            for tl in self.lights:
+                tl_position = tl.pose.pose.position
+                tl_wp = self.get_closest_waypoint(tl_position)
+                lights_wp.append(tl_wp)
+            self.lights_wp = lights_wp
 
     def image_cb(self, msg):
         """Identifies red lights in the incoming camera image and publishes the index
@@ -222,19 +230,18 @@ class TLDetector(object):
         if (self.lights):
             distance_to_closest_light = 9999999
             # loop throw all traffic lights
-            for tl in self.lights:
-                current_car_position = self.pose.pose.position
-                tl_position = tl.pose.pose.position
-                # calculate the distance between the current car position and the traffic light
-                distance = self.distance_between_two_points(current_car_position, tl_position)
-                tl_wp = self.get_closest_waypoint(tl_position)
+            for (idx, tl) in enumerate(self.lights):
                 # if the traffic light is in front of the car and its distance is smaller then the reference distance:
                 # TODO: change the value 200 to a more rational value
-                if tl_wp > car_position + 200:
+                tl_wp = self.lights_wp[idx]
+                if tl_wp <= car_position or tl_wp > car_position + 200:
                     continue
-                # if the traffic light is in front of the vehicle and the distance to the current car position
-                # is smaller then the previous distance, retain it.
-                if tl_wp > car_position and distance < distance_to_closest_light:
+
+                # calculate the distance between the current car position and the traffic light
+                current_car_position = self.pose.pose.position
+                tl_position = tl.pose.pose.position                
+                distance = self.distance_between_two_points(current_car_position, tl_position)
+                if distance < distance_to_closest_light:
                     light = tl
                     light_wp = tl_wp
                     distance_to_closest_light = distance
