@@ -42,7 +42,9 @@ class TLDetector(object):
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
         self.bridge = CvBridge()
-        self.light_classifier = TLClassifier()
+        # KB 10Oct 2017
+        # adding the path to the light classifier initialisation call in the line below
+        self.light_classifier = TLClassifier("light_classification/model/GAN")
         self.listener = tf.TransformListener()
 
         self.state = TrafficLight.UNKNOWN
@@ -86,14 +88,14 @@ class TLDetector(object):
             self.last_state = self.state
             light_wp = light_wp if state == TrafficLight.RED else -1
             #TODO: DEBUG remove the following print statements in the final version
-            if state == TrafficLight.RED:
-                print "red light detected"
-            elif state == TrafficLight.GREEN:
-                print "green light detected"
-            elif state == TrafficLight.YELLOW:
-                print "yellow light detected"
-            elif state == TrafficLight.UNKNOWN:
-                print "unknown traffic light detected"
+##            if state == TrafficLight.RED:
+##                print "red light detected"
+##            elif state == TrafficLight.GREEN:
+##                print "green light detected"
+##            elif state == TrafficLight.YELLOW:
+##                print "yellow light detected"
+##            elif state == TrafficLight.UNKNOWN:
+##                print "unknown traffic light detected"
             self.last_wp = light_wp
             self.upcoming_red_light_pub.publish(Int32(light_wp))
         else:
@@ -155,7 +157,9 @@ class TLDetector(object):
             rospy.logerr("Failed to find camera to map transform")
 
         #TODO Use tranform and rotation to calculate 2D position of light in image
-
+        # KB 10Oct2017
+        # commenting line below, and using dummy values, so that tf_classifier.py can be tested 
+        # x, y = self.project_to_image_plane(light.pose.pose.position)
         x = 0
         y = 0
 
@@ -185,7 +189,9 @@ class TLDetector(object):
         # current light status from the simulator instead of getting it
         # from the classifier please remove the following line as soon as
         # the classifer works.
-        return light.state
+        # KB 10Oct2017
+        # commenting out line below
+        # return light.state
 
         #Get classification
         return self.light_classifier.get_classification(cv_image)
@@ -236,7 +242,7 @@ class TLDetector(object):
         if light:
             state = self.get_light_state(light)
             closest_ss_wp_index = self.get_stopline_wp_before_tl(light_wp)
-            print " -- process_traffic_lights: light_wp = ", light_wp, " vs. closest_ss_wp_index = " , closest_ss_wp_index
+##            print " -- process_traffic_lights: light_wp = ", light_wp, " vs. closest_ss_wp_index = " , closest_ss_wp_index
             return closest_ss_wp_index, state
         #self.waypoints = None
         return -1, TrafficLight.UNKNOWN
