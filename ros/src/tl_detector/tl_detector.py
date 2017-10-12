@@ -99,7 +99,7 @@ class TLDetector(object):
         
         if self.fsm_state == TLDetector.FSM_STATE_IDLE:            
             if self.pose and self.last_pose and self.waypoints and self.lights:
-                self.upcoming_red_light_pub.publish(Int32(-1))
+##                self.upcoming_red_light_pub.publish(Int32(-1))
 
                 # Init classifier
                 self.get_light_state(self.lights[0])
@@ -282,7 +282,7 @@ class TLDetector(object):
                 # if the traffic light is in front of the car and its distance is smaller then the reference distance:
                 # TODO: change the value 200 to a more rational value
                 tl_wp = self.lights_wp[idx]
-                if tl_wp <= car_position or tl_wp > car_position + 200:
+                if tl_wp <= car_position or tl_wp > car_position + 300:
                     continue
 
                 # calculate the distance between the current car position and the traffic light
