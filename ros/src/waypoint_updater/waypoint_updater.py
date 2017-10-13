@@ -9,6 +9,7 @@ import copy
 import tf
 from scipy.interpolate import CubicSpline
 import numpy as np
+import time
 
 LOOKAHEAD_WPS = 150  # Number of waypoints we will publish. You can change this number
 waypoints_search_range = 10  # Number of waypoints to search current position back and forth
@@ -31,10 +32,10 @@ class WaypointUpdater(object):
         self.next_waypoint_index = None
         self.traffic_stop_waypoint = None
 
-        self.loop_freq = 10 # hertz
+        self.loop_freq = 20 # hertz
 
-        self.decel_limit = rospy.get_param('/dbw_node/decel_limit', -5)
-        self.accel_limit = rospy.get_param('/dbw_node/accel_limit', 1)              
+        self.decel_limit = -5 # rospy.get_param('/dbw_node/decel_limit', -5)
+        self.accel_limit = 5 # rospy.get_param('/dbw_node/accel_limit', 1)              
 
         # Convert kph to meters per sec
         self.velocity = rospy.get_param('/waypoint_loader/velocity', 10) * 0.27778
@@ -124,7 +125,7 @@ class WaypointUpdater(object):
                     else:
                         vwp = vx
                     wp.twist.twist.linear.x = vwp
-                                            
+                          
                 self.final_waypoints_pub.publish(lane)
                                 
             rate.sleep()

@@ -59,8 +59,8 @@ def trafficlights(sid, data):
 def image(sid, data):
     global count
     count += 1
-    if count%(skip+1)==0:
-        bridge.publish_camera(data)
+    #if count%(skip+1)==0:
+    bridge.publish_camera(data)
     
 if __name__ == '__main__':
 

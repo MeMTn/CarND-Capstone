@@ -11,8 +11,9 @@ import tf
 import cv2
 import yaml
 import math
+import time
 
-STATE_COUNT_THRESHOLD = 3
+STATE_COUNT_THRESHOLD = 1
 
 class TLDetector(object):
 
