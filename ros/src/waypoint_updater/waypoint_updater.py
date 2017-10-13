@@ -10,7 +10,7 @@ import tf
 from scipy.interpolate import CubicSpline
 import numpy as np
 
-LOOKAHEAD_WPS = 100  # Number of waypoints we will publish. You can change this number
+LOOKAHEAD_WPS = 150  # Number of waypoints we will publish. You can change this number
 waypoints_search_range = 10  # Number of waypoints to search current position back and forth
 
 MAX_DECEL = 1.
@@ -27,6 +27,7 @@ class WaypointUpdater(object):
         # Store the Waypoint List when Base WayPoint is Called 
         self.waypoints = None
         self.current_pose = None
+        self.last_pose = None
         self.next_waypoint_index = None
         self.traffic_stop_waypoint = None
 
@@ -39,10 +40,12 @@ class WaypointUpdater(object):
         self.velocity = rospy.get_param('/waypoint_loader/velocity', 10) * 0.27778
 
         # Go slow for now in order to give the traffic classifier more time
-        self.velocity = 2.0
+##        self.velocity = 2.0
         
-        self.velocity_min = 2 * self.accel_limit * (1./self.loop_freq)
+        self.velocity_min = 3 * self.accel_limit * (1./self.loop_freq)
         self.current_velocity = 0
+
+        self.initialized = False
         
         self.loop()
 
@@ -50,7 +53,6 @@ class WaypointUpdater(object):
         rate = rospy.Rate(self.loop_freq)
         while not rospy.is_shutdown():
             if (self.waypoints and self.next_waypoint_index != None):
-                # For now a very simple implementation to get things moving. Find and then Publish the Lookahead waypoints
                 lane = Lane()
                 lane.header.frame_id = self.current_pose.header.frame_id
                 lane.header.stamp = rospy.Time.now()
@@ -61,23 +63,18 @@ class WaypointUpdater(object):
                 else:
                     lane.waypoints = self.waypoints[self.next_waypoint_index:]
                     lane.waypoints.extend(self.waypoints[0:(self.next_waypoint_index+LOOKAHEAD_WPS) % len(self.waypoints)])
-                    
+           
                 # Current target car velocity in m/s
                 vx = self.get_waypoint_velocity(lane.waypoints[0])
                 vx2 = vx * vx
                 self.current_velocity = vx
                 
-##                print " "
-##                print " -- 1 current next_waypoint_index = ", self.next_waypoint_index, " / vx = ", vx
-
-                if self.traffic_stop_waypoint != None:
+                if self.initialized and self.traffic_stop_waypoint != None:
                     # Stop light ahead
         
                     # Calculate deceleration needed to stop at traffic stop waypoint
                     stopping_distance = self.distance(self.waypoints, self.next_waypoint_index, self.traffic_stop_waypoint)
                     min_stopping_distance = -vx2 / (2 * self.decel_limit)
-
-##                    print " -- 2 stopping_distance = ", stopping_distance, " / self.traffic_stop_waypoint = ", self.traffic_stop_waypoint
 
                     if stopping_distance > 10 * min_stopping_distance:
                         # Keep current speed
@@ -103,6 +100,14 @@ class WaypointUpdater(object):
                         vx2 = vx * vx
                         ax = 0
 
+                    if not self.initialized and self.last_pose:
+                        car_current_pos = self.current_pose.pose.position
+                        car_last_pos = self.last_pose.pose.position
+                        dist = self.distance_between_two_points(car_current_pos, car_last_pos)
+                        if dist > 0.01 and vx > (self.velocity / 5):
+                            # Reached a starting speed
+                            self.initialized = True                                  
+
                 prev_pos = lane.waypoints[0].pose.pose.position
                 for wp in lane.waypoints[1:]:
                     next_pos = wp.pose.pose.position
@@ -119,13 +124,9 @@ class WaypointUpdater(object):
                     else:
                         vwp = vx
                     wp.twist.twist.linear.x = vwp
-                    
-##                self.smooth_target_velocities(lane.waypoints)
-                    
+                                            
                 self.final_waypoints_pub.publish(lane)
-                
-##                print " "
-                
+                                
             rate.sleep()
 
     def smooth_target_velocities(self, lane_wps):
@@ -213,6 +214,7 @@ class WaypointUpdater(object):
 
     # This is where the real magic happens of moving the car. Find the closes waypoint and publish it
     def pose_cb(self, msg):
+        self.last_pose = self.current_pose
         self.current_pose = msg
         if self.waypoints:
             next_waypoint_index = self.identify_next_waypoint_index()
@@ -220,8 +222,10 @@ class WaypointUpdater(object):
 
 
     def waypoints_cb(self, lane):
-        if hasattr(self, 'waypoints') and self.waypoints != lane.waypoints:
+        if not self.waypoints:
             self.waypoints = lane.waypoints
+            for idx in range(len(self.waypoints)):
+                self.set_waypoint_velocity(self.waypoints, idx, self.velocity_min)
             self.next_waypoint_index = None
 
 
@@ -230,8 +234,8 @@ class WaypointUpdater(object):
             # Nothing to do
             return
 
-        traffic_wp = traffic_waypoint.data
-        
+        traffic_wp = traffic_waypoint.data       
+             
         if traffic_wp >= 0:
             # Check if waypoint is within range of path
             valid_traffic_waypoint = True
