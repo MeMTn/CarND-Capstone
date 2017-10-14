@@ -82,12 +82,12 @@ When the waypoint updater receives the current car pose, it must first calculate
 
 Once the waypoint updater finds the next closest waypoint to follow, it checks to see if there is an upcoming traffic waypoint.  If there is no traffic waypoint, it will take the closest waypoint's velocity and for the next LOOKAHEAD_WPS number of waypoints calculate the appropriate velocities such that it either accelerates to the cruise velocity or stays at the cruise velocity.  If there is an upcoming traffic waypoint, however, it will calculate how far it is from its stopping point and how long it would take to stop using maximum deceleration.  If there is sufficient margin, it will continue to cruise at its current velocity; otherwise it will calculate a trajectory where it slows down.
 
-For both accelerating and decelerating, the waypoint updater uses the distance between two waypoints and the simple kinematic equation: Vf^2 = Vi^2 + 2 * a * s, where :
+For both accelerating and decelerating, the waypoint updater uses the distance between two waypoints and the simple kinematic equation: *Vf <sup>2</sup>* = *Vi <sup>2</sup>* + *2&middot;a&middot;s*, where :
 
-* Vf : next waypoint velocity
-* Vi : current waypoint velocity
-* a  : acceleration or deceleration where acceleration is > 0 and deceleration < 0
-* s  : distance between waypoints
+* *Vf* : next waypoint velocity
+* *Vi* : current waypoint velocity
+* *a*  : acceleration or deceleration where acceleration is > 0 and deceleration < 0
+* *s*  : distance between waypoints
 
 When the waypoint updater receives a traffic waypoint, it also performs some checks to ensure that it is valid.  If the traffic waypoint is behind the car or outside of it's projected trajectory, then it will ignore it.  If the traffic waypoint is -1 and it's stopped at a traffic waypoint, then it clears its current traffic waypoint and can start accelerating to its target cruise velocity once again.
 
