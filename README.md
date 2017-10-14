@@ -93,4 +93,13 @@ When the waypoint updater receives a traffic waypoint, it also performs some che
 
 In the simulator, the base_waypoints forms a loop around the test road.  To support looping around the track, modular arithmetic is used when dealing with waypoint indices.  For example if there are NUM_WAYPOINTS which are indexed from 0 to NUM_WAYPOINTS-1, NUM_WAYPOINTS and NUM_WAYPOINTS+1 will map back to index 0 and 1 respectively.
 
+### Traffic classifier
 
+Traffic classifier code is used which was used in Udacity AI nano-degree course and by Vulture team.
+(in Traffic classifier/gan_semi_supervised_kb.ipynb)
+
+Number of epochs was set to 55, as the trade-off when the classifier accuracy on the test set starts to diminish (while the accuracy on the testing set still increases - therefore representint when the classifier starts to overfit the data.)
+
+Overall 5 models were trained and the best model retained.
+
+An example image below:
