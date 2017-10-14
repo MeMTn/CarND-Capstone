@@ -78,3 +78,24 @@ For both accelerating and decelerating, the waypoint updater uses the distance b
 When the waypoint updater receives a traffic waypoint, it also performs some checks to ensure that it is valid.  If the traffic waypoint is behind the car or outside of it's projected trajectory, then it will ignore it.  If the traffic waypoint is -1 and it's stopped at a traffic waypoint, then it clears its current traffic waypoint and can start accelerating to its target cruise velocity once again.
 
 In the simulator, the base_waypoints forms a loop around the test road.  To support looping around the track, modular arithmetic is used when dealing with waypoint indices.  For example if there are NUM_WAYPOINTS which are indexed from 0 to NUM_WAYPOINTS-1, NUM_WAYPOINTS and NUM_WAYPOINTS+1 will map back to index 0 and 1 respectively.
+
+### Controller - Drive by Wire 
+# ![Drive by Wire Controller block]
+
+In order to develop the drive by wire node, there were a variety of controllers that were used in the
+twist_controller.py. These are the following:
+
+- First is the PID controller which is used to correct for velocity error. Default implementation
+provided by Udacity worked very well for this task, so they were used.
+- The second is the Low pass filter which is applied on top of the velocity corrections from the PID
+controller.
+- The third is another PID controller which is used to control the Steering. Default implementation
+provided by Udacity worked very well for this task, so they were used.
+
+All these controllers are applied in the control function in the twist controller. The biggest challenge in
+implementing the Drive by wire node was to find the right parameters for the PID controller. It took
+quite a few iterations on empirical analysis to find the right parameters for the controller. The second
+challenge which caused the bulk of delay was the “default” queue sizes and rate at which messages are
+published by various ros nodes in the provided code-base. Suggestions on the forum helped quite a lot
+in finding the right values for this. Once the right queue sizes were identified, developing the drive by
+wire node took only a little time.
