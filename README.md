@@ -9,31 +9,50 @@ TODO: maybe overview of project on how Perception - Planning - Control work toge
 
 ### Perception - the Traffic light detector
 
-![waypoint updater block](./tl-detector-ros-graph.png)
+The traffic detection ROS node's purpose is to provide obstacle information to the planning node. In this project, traffic lights are the first obstacle that we focus on.
 
-The traffic detection ROS node purpose is to provide obstacle information to the planning nodes. In this project, traffic lights are the first obstacle that we focus on.
+The traffic detector node achieves this by subscribing to three topics:
 
+![tl detector block](./tl-detector-ros-graph.png)
 
+* **/base_waypoints** provides the complete list of waypoints for the course. and are received only once.
+* **/current_pose** can be used used to determine the vehicle's current location.
+* **/image_color** which provides an image stream from the car's camera. These images are used to determine the color of upcoming traffic lights.
 
-This node takes in data from the /image_color, /current_pose, and /base_waypoints topics and publishes the locations to stop for red traffic lights to the /traffic_waypoint topic.
+The node then publishes the index of the waypoint for the nearest upcoming red light's stop line to a single topic: **/traffic_waypoint**
 
-The /current_pose topic provides the vehicle's current position, and /base_waypoints provides a complete list of waypoints the car will be following.
+This index will be later consumed by the Planning node to set the target velocity for this waypoint index to 0 and smoothly decrease the vehicle velocity in the waypoints leading up to this index.
 
-You will build both a traffic light detection node and a traffic light classification node. Traffic light detection should take place within tl_detector.py, whereas traffic light classification should take place within ../tl_detector/light_classification_model/tl_classfier.py.
+We incorporated a Finite State Machine (FSM) into this node. The FSM is driven by the frequency of **image_cb** -- a callback function for incoming images from the car's camera. (the publisher lives in *server.py*)
 
+Initially, the FSM is in **IDLE** state, and moves on to **STOP_LINE** state upon receiving the first image message and if the traffic light array containing traffic light waypoints has been received. During this state transition we initialize the traffic light classifier.
 
-Traffic Light Detection: This can be split into 2 parts:
-Detection: Detect the traffic light and its color from the /image_color. The topic /vehicle/traffic_lights contains the exact location and status of all traffic lights in simulator, so you can test your output.
-Waypoint publishing: Once you have correctly identified the traffic light and determined its position, you can convert it to a waypoint index and publish it.
+In the **STOP_LINE** we are ready to classify incoming images. As a first classification approach we choose a very conservative one, i.e., only when the car comes to a full stop (which can be determined by observing the vehicle's current pose), we classify the camera image. Fixing the view point and distance to the traffic light increases the quality of the classification and eases the control of the car approaching a traffic light - since we always have to come to a stop in front of a traffic light. and then we start classification.
 
+In the **STOP_LINE** we constantly publish the waypoint index of the stopline in front of the next traffic light.
 
-TODO:
+Once we come to a full halt, we move on to **STOP_CLASSIFY** state. Based on the result of the traffic light classification we stay in this state as long as the light is red. Once it is detected as not red, we leave this state and transition into **GO** state.
 
-* FSM
+In **GO** we signal the car (by publishing a -1 traffic_waypoint) that the light switched from red and the car can accelerate.
+Once we detect in this state that the car is moving, we transition into **STOP_LINE** state and wait until the car stops at the next stopline in front of a traffic light.
 
-* Time delay
+This summarizes the simple FSM in the traffic light detection node, which is driven my car image messages:
+![tl detector block](CapstoneFSM2.png)
 
+Note, that it is very crucial to avoid any time delays between detecting "not red" on the traffic light and publishing the "GO" message to the planner.
 
+Next, we describe the classification process in more detail:
+
+### Traffic classifier
+
+Traffic classifier code is used which was used in Udacity AI nano-degree course and by Vulture team.
+(in Traffic classifier/gan_semi_supervised_kb.ipynb)
+
+Number of epochs was set to 55, as the trade-off when the classifier accuracy on the test set starts to diminish (while the accuracy on the testing set still increases - therefore representint when the classifier starts to overfit the data.)
+
+Overall 5 models were trained and the best model retained.
+
+An example image below:
 
 ### Planning - Waypoint Updater
 
@@ -59,14 +78,3 @@ For both accelerating and decelerating, the waypoint updater uses the distance b
 When the waypoint updater receives a traffic waypoint, it also performs some checks to ensure that it is valid.  If the traffic waypoint is behind the car or outside of it's projected trajectory, then it will ignore it.  If the traffic waypoint is -1 and it's stopped at a traffic waypoint, then it clears its current traffic waypoint and can start accelerating to its target cruise velocity once again.
 
 In the simulator, the base_waypoints forms a loop around the test road.  To support looping around the track, modular arithmetic is used when dealing with waypoint indices.  For example if there are NUM_WAYPOINTS which are indexed from 0 to NUM_WAYPOINTS-1, NUM_WAYPOINTS and NUM_WAYPOINTS+1 will map back to index 0 and 1 respectively.
-
-### Traffic classifier
-
-Traffic classifier code is used which was used in Udacity AI nano-degree course and by Vulture team.
-(in Traffic classifier/gan_semi_supervised_kb.ipynb)
-
-Number of epochs was set to 55, as the trade-off when the classifier accuracy on the test set starts to diminish (while the accuracy on the testing set still increases - therefore representint when the classifier starts to overfit the data.)
-
-Overall 5 models were trained and the best model retained.
-
-An example image below:
