@@ -1,7 +1,41 @@
 This is the project repo for the final project of the Udacity Self-Driving Car Nanodegree: Programming a Real Self-Driving Car. For more information about the project, see the project introduction [here](https://classroom.udacity.com/nanodegrees/nd013/parts/6047fe34-d93c-4f50-8336-b70ef10cb4b2/modules/e1a23b06-329a-4684-a717-ad476f0d8dff/lessons/462c933d-9f24-42d3-8bdc-a08a5fc866e4/concepts/5ab4b122-83e6-436d-850f-9f4d26627fd9).
 
 
-### Waypoint Updater
+### Overall project overview
+
+TODO Salim
+
+TODO: maybe overview of project on how Perception - Planning - Control work together. nicely reflected in a distributed tool like ROS.
+
+### Perception - the Traffic light detector
+
+![waypoint updater block](./tl-detector-ros-graph.png)
+
+The traffic detection ROS node purpose is to provide obstacle information to the planning nodes. In this project, traffic lights are the first obstacle that we focus on.
+
+
+
+This node takes in data from the /image_color, /current_pose, and /base_waypoints topics and publishes the locations to stop for red traffic lights to the /traffic_waypoint topic.
+
+The /current_pose topic provides the vehicle's current position, and /base_waypoints provides a complete list of waypoints the car will be following.
+
+You will build both a traffic light detection node and a traffic light classification node. Traffic light detection should take place within tl_detector.py, whereas traffic light classification should take place within ../tl_detector/light_classification_model/tl_classfier.py.
+
+
+Traffic Light Detection: This can be split into 2 parts:
+Detection: Detect the traffic light and its color from the /image_color. The topic /vehicle/traffic_lights contains the exact location and status of all traffic lights in simulator, so you can test your output.
+Waypoint publishing: Once you have correctly identified the traffic light and determined its position, you can convert it to a waypoint index and publish it.
+
+
+TODO:
+
+* FSM
+
+* Time delay
+
+
+
+### Planning - Waypoint Updater
 
 ![waypoint updater block](./waypoint-updater-ros-graph.png)
 
