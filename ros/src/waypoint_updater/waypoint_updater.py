@@ -81,6 +81,7 @@ class WaypointUpdater(object):
                         # Keep current speed
                         ax = 0
                     else:
+                        stopping_distance -= 1
                         if stopping_distance > 0:
                             ax = - vx2 / (2. * stopping_distance)
                             if ax < self.decel_limit:
