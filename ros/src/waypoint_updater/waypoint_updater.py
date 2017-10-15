@@ -118,6 +118,9 @@ class WaypointUpdater(object):
                         vwp2 = vx2 + 2 * ax * dist
                         if vwp2 > 0:
                             vwp = math.sqrt(vwp2)
+                            if vwp > self.velocity:
+                                vwp = self.velocity
+                                vwp2 = vwp * vwp
                             vx2 = vwp2
                         else:
                             vwp = 0
