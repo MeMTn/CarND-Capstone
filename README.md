@@ -7,14 +7,14 @@ This project is built on the Robot operating system ROS which has a node based a
 This ROS implementation is composed of three main internal components and one external, which are:
 
 #### Internal:
-- The Prediction Component: responsible for detecting the traffic lights and obstacles on the road and where they are
+- The perception Component: responsible for detecting the traffic lights and obstacles on the road and where they are
 - The Planning component: responsible for planning where the car should drive and in what velocity and where it
- Should stop based on the current car position and the traffic lights positions predicted in the prediction component
+ Should stop based on the current car position and the traffic lights positions perceived in the perception component
 - The Control Component: responsible for executing the planned path and velocity received from the planning component.
 
 #### External:
 There is also an external component which is the car/simulator. This publishes to two topics:
-- **The image_color topic**:  this delivers a stream of images taken by the car camera in real time. These images are used by the prediction component to detect traffic lights and obstacles positions.
+- **The image_color topic**:  this delivers a stream of images taken by the car camera in real time. These images are used by the perception component to detect traffic lights and obstacles positions.
 - **current_pose topic**:  this delivers information about the car current position.
 
 
