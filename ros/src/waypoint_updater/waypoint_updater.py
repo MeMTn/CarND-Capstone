@@ -105,7 +105,7 @@ class WaypointUpdater(object):
                         car_current_pos = self.current_pose.pose.position
                         car_last_pos = self.last_pose.pose.position
                         dist = self.distance_between_two_points(car_current_pos, car_last_pos)
-                        if dist > 0.01 and vx > (self.velocity / 5):
+                        if dist > 0.01 and vx > (self.velocity / 6):
                             # Reached a starting speed
                             self.initialized = True                                  
 
