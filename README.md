@@ -128,14 +128,9 @@ wire node took only a little time.
 
 ### Note to Udacity
 
-We are all delighted to have gone through the Udacity learning experience. It was a worth path, sometimes difficult, but there is no doubt in our mind that we are now in possession of powerful tools, good AI insight, and of acquaintanceship of great Udacity student colleagues. Thank you very much. The difficulties are often due to the pioneering and encountering obstacles that further student cohorts won’t face.
+We are all delighted to have gone through the Udacity learning experience. It was a worthy path, sometimes difficult, but there is no doubt in our mind that we are now in possession of powerful tools, good AI insight, and of acquaintanceship of great Udacity student colleagues. Thank you very much. The difficulties are often due to the pioneering and encountering obstacles that further student cohorts won’t face.
 
 As discussed on the [slack and elsewhere]( https://carnd.slack.com/archives/C6NVDVAQ3/p1507776908000005?thread_ts=1507774636.000119&cid=C6NVDVAQ3), I would like, if you can, to award us with the graduation certificate.
 (And I believe, team members will send their graduation requests separately.)
 
-The MagnumAI team members are:
-* Ken Quon <ken spamfilter at gmail dot com>
-* Manish Mehta <mehtama1@gmail.com>
-* Robert Preissl <r_preissl@yahoo.de>
-* Salim Melliti <salim.melliti@gmail.com>
-* Kreso Bilan <kreso.bilan@googlemail.com> - team leader (purely by chance)
+The MagnumAI team members are shared with the reviewer and Udacity by different means.
