@@ -65,7 +65,7 @@ Next, we describe the classification process in more detail:
 Traffic classifier code is [GAN network](https://blog.openai.com/generative-models/) jupyter notebook as in Udacity AI nano-degree course and by Vulture team.
 (in Traffic classifier/gan_semi_supervised_kb.ipynb)
 
-![GAN network idea](./GAN networks.png)
+![GAN network idea](./GAN%20networks.png)
 
 Number of epochs was set to 55, as the trade-off when the classifier accuracy on the test set starts to diminish (while the accuracy on the testing set still increases - therefore representing when the classifier starts to overfit the data.)
 
