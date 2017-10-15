@@ -22,6 +22,12 @@ Here is a graph showing the whole system architecture and how its parts communic
 
 ![waypoint updater block](./final-project-ros-graph-v2.png)
 
+Note to the reviewer:
+
+Dear Sir, it would appear to the MagnumAI team, that in the simulator loop, sometimes the drive mode has to be switched to the manual. We have noticed that occasionally our simulated car has problems starting on the first traffic light. Unfortunately, the car needs manual drive through the traffic lights: 3 to 5. The last three traffic light sets (6-8) should be passed as expected (obeying traffic regulations).
+
+The reason for our problem, we suspect, is overfitting of our GAN network prediction model, which we will resolve when repeating the training for the real world Udacity train loop.
+
 In the following, each of these Components/nodes will be explained in more details.
 
 ### Perception - the Traffic light detector
@@ -119,3 +125,17 @@ challenge which caused the bulk of delay was the “default” queue sizes and r
 published by various ros nodes in the provided code-base. Suggestions on the forum helped quite a lot
 in finding the right values for this. Once the right queue sizes were identified, developing the drive by
 wire node took only a little time.
+
+### Note to Udacity
+
+We are all delighted to have gone through the Udacity learning experience. It was a worth path, sometimes difficult, but there is no doubt in our mind that we are now in possession of powerful tools, good AI insight, and of acquaintanceship of great Udacity student colleagues. Thank you very much. The difficulties are often due to the pioneering and encountering obstacles that further student cohorts won’t face.
+
+As discussed on the [slack and elsewhere]( https://carnd.slack.com/archives/C6NVDVAQ3/p1507776908000005?thread_ts=1507774636.000119&cid=C6NVDVAQ3), I would like, if you can, to award us with the graduation certificate.
+(And I believe, team members will send their graduation requests separately.)
+
+The MagnumAI team members are:
+Ken Quon <ken spamfilter at gmail dot com>
+Manish Mehta <mehtama1@gmail.com>
+Robert Preissl <r_preissl@yahoo.de>
+Salim Melliti <salim.melliti@gmail.com>
+Kreso Bilan <kreso.bilan@googlemail.com> - team leader (purely by chance)
