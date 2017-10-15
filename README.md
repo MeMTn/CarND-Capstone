@@ -134,8 +134,8 @@ As discussed on the [slack and elsewhere]( https://carnd.slack.com/archives/C6NV
 (And I believe, team members will send their graduation requests separately.)
 
 The MagnumAI team members are:
-Ken Quon <ken spamfilter at gmail dot com>
-Manish Mehta <mehtama1@gmail.com>
-Robert Preissl <r_preissl@yahoo.de>
-Salim Melliti <salim.melliti@gmail.com>
-Kreso Bilan <kreso.bilan@googlemail.com> - team leader (purely by chance)
+* Ken Quon <ken spamfilter at gmail dot com>
+* Manish Mehta <mehtama1@gmail.com>
+* Robert Preissl <r_preissl@yahoo.de>
+* Salim Melliti <salim.melliti@gmail.com>
+* Kreso Bilan <kreso.bilan@googlemail.com> - team leader (purely by chance)
