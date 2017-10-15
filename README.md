@@ -3,9 +3,26 @@ This is the project repo for the final project of the Udacity Self-Driving Car N
 
 ### Overall project overview
 
-TODO Salim
+This project is built on the Robot operating system ROS which has a node based architecture, the different nodes can communicate with each other using messages. Each node can publish and/or subscribe to topics. When a node subscribes to a topic it receives all messages published to this topic.
+This ROS implementation is composed of three main internal components and one external, which are:
 
-TODO: maybe overview of project on how Perception - Planning - Control work together. nicely reflected in a distributed tool like ROS.
+#### Internal:
+- The Prediction Component: responsible for detecting the traffic lights and obstacles on the road and where they are
+- The Planning component: responsible for planning where the car should drive and in what velocity and where it
+ Should stop based on the current car position and the traffic lights positions predicted in the prediction component
+- The Control Component: responsible for executing the planned path and velocity received from the planning component.
+
+#### External:
+There is also an external component which is the car/simulator. This publishes to two topics:
+- **The image_color topic**:  this delivers a stream of images taken by the car camera in real time. These images are used by the prediction component to detect traffic lights and obstacles positions.
+- **current_pose topic**:  this delivers information about the car current position.
+
+
+Here is a graph showing the whole system architecture and how its parts communicate with each other:
+
+![waypoint updater block](./final-project-ros-graph-v2.png)
+
+In the following, each of these Components/nodes will be explained in more details.
 
 ### Perception - the Traffic light detector
 
