@@ -97,7 +97,8 @@ When the waypoint updater receives a traffic waypoint, it also performs some che
 In the simulator, the base_waypoints forms a loop around the test road.  To support looping around the track, modular arithmetic is used when dealing with waypoint indices.  For example if there are NUM_WAYPOINTS which are indexed from 0 to NUM_WAYPOINTS-1, NUM_WAYPOINTS and NUM_WAYPOINTS+1 will map back to index 0 and 1 respectively.
 
 ### Controller - Drive by Wire 
-# ![Drive by Wire Controller block]
+
+# ![Drive by Wire Controller block](./DBWNode.png)
 
 In order to develop the drive by wire node, there were a variety of controllers that were used in the
 twist_controller.py. These are the following:
