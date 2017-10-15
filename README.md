@@ -65,11 +65,11 @@ Next, we describe the classification process in more detail:
 Traffic classifier code is used which was used in Udacity AI nano-degree course and by Vulture team.
 (in Traffic classifier/gan_semi_supervised_kb.ipynb)
 
-Number of epochs was set to 55, as the trade-off when the classifier accuracy on the test set starts to diminish (while the accuracy on the testing set still increases - therefore representint when the classifier starts to overfit the data.)
+Number of epochs was set to 55, as the trade-off when the classifier accuracy on the test set starts to diminish (while the accuracy on the testing set still increases - therefore representing when the classifier starts to overfit the data.)
 
 Overall 5 models were trained and the best model retained.
 
-An example image below:
+![An example image below](./Traffic-classifier/data/collections/samples/session1_100.jpg)
 
 ### Planning - Waypoint Updater
 
